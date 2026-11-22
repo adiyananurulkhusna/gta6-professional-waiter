@@ -30,6 +30,25 @@ try {
   process.exit(1);
 }
 
+// Validate before handing the file to the gate: a placeholder or malformed
+// POST.json would otherwise be copied silently and only fail later, when the
+// gate tries to fetch the post. Fail fast here with a clear message instead.
+let postUrl: unknown;
+try {
+  postUrl = (JSON.parse(contents) as { url?: unknown }).url;
+} catch (err) {
+  console.error(`POST.json in ${source} is not valid JSON: ${(err as Error).message}`);
+  process.exit(1);
+}
+if (typeof postUrl !== "string" || !/^https:\/\/(x\.com|twitter\.com)\/\w+\/status\/\d+/.test(postUrl)) {
+  console.error(
+    `POST.json in ${source} has no usable post URL (expected https://x.com/<handle>/status/<id>); ` +
+    `replace the placeholder with the real posted address before submitting.`
+  );
+  process.exit(1);
+}
+console.log(`handing off post: ${postUrl}`);
+
 try {
   writeFileSync(target, contents);
 } catch (err) {
